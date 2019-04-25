@@ -19,7 +19,7 @@ contract Proxy is ProxyStorage, Ownable {
 
     function () external payable {
 
-        if (msg.value == 0 && isOwner()){
+        if (isOwner()){
             address localImpl = implementation;
             assembly {
                 let ptr := mload(0x40)
@@ -46,10 +46,16 @@ contract Score is ProxyStorage, Ownable, ScoreStorage {
     function setScore(uint _score) public {
         score = _score;
     }
+
+    function () external payable {
+    }
 }
 
 contract ScoreV2 is ProxyStorage, Ownable, ScoreStorage {
     function setScore(uint _score) public {
         score = _score + 1;
+    }
+
+    function () external payable {
     }
 }
