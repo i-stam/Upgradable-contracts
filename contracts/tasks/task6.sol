@@ -1,49 +1,37 @@
+pragma solidity ^0.5.0;
 
+// import Ownable library straight from github
+import "github.com/OpenZeppelin/zeppelin-solidity/contracts/ownership/Ownable.sol";
 
-// handle access control/permission
-contract Proxy {
+contract ProxyStorage {
+    address public implementation;
+}
 
-    bytes32 private constant implementationAddressKey = keccak256("where the address will be stored");
-    
+contract Proxy is ProxyStorage, Ownable {
+
     constructor(address _impl) public {
-        // check that its valid before setting the address
-        
-        bytes32 slot = implementationAddressKey;
-        //solium-disable-next-line security/no-inline-assembly
-        assembly {
-            sstore(slot, _impl)
-        }
+        implementation = _impl;
     }
 
-    function implementation() public returns(address impl) {
-        bytes32 slot = implementationAddressKey;
-          //solium-disable-next-line security/no-inline-assembly
-        assembly {
-            impl := sload(slot)
-        }
+    function setImplementation(address _impl) onlyOwner public {
+        implementation = _impl;
     }
 
-    function setImplementation(address _impl) public {
-        bytes32 slot = implementationAddressKey;
-        //solium-disable-next-line security/no-inline-assembly
-        assembly {
-            sstore(slot, _impl)
-        }
-    }
+    function () external payable {
 
-    function () public {
-        address localImpl = implementation();
-         //solium-disable-next-line security/no-inline-assembly
-        assembly {
-            let ptr := mload(0x40)
-            calldatacopy(ptr, 0, calldatasize)
-            let result := delegatecall(gas, localImpl, ptr, calldatasize, 0, 0)
-            let size := returndatasize
-            returndatacopy(ptr, 0, size)
+        if (isOwner()){
+            address localImpl = implementation;
+            assembly {
+                let ptr := mload(0x40)
+                calldatacopy(ptr, 0, calldatasize)
+                let result := delegatecall(gas, localImpl, ptr, calldatasize, 0, 0)
+                let size := returndatasize
+                returndatacopy(ptr, 0, size)
 
-            switch result
-            case 0 { revert(ptr, size) }
-            default { return(ptr, size) }
+                switch result
+                case 0 { revert(ptr, size) }
+                default { return(ptr, size) }
+            }
         }
     }
 
@@ -51,21 +39,23 @@ contract Proxy {
 
 
 contract ScoreStorage {
-
-    uint256 public score;
-
+    uint public score;
 }
 
-contract Score is ScoreStorage {
-
-    function setScore(uint256 _score) public {
+contract Score is ProxyStorage, Ownable, ScoreStorage {
+    function setScore(uint _score) public {
         score = _score;
+    }
+
+    function () external payable {
     }
 }
 
-contract ScoreV2 is ScoreStorage {
+contract ScoreV2 is ProxyStorage, Ownable, ScoreStorage {
+    function setScore(uint _score) public {
+        score = _score + 1;
+    }
 
-    function setScore(uint256 _score) public {
-        score = _score * 5;
+    function () external payable {
     }
 }
